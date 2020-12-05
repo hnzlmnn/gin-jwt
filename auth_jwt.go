@@ -103,10 +103,10 @@ type GinJWTMiddleware struct {
 	PubKeyFile string
 
 	// Private key
-	privKey *rsa.PrivateKey
+	PrivKey *rsa.PrivateKey
 
 	// Public key
-	pubKey *rsa.PublicKey
+	PubKey *rsa.PublicKey
 
 	// Optionally return the token as a cookie
 	SendCookie bool
@@ -208,13 +208,17 @@ func New(m *GinJWTMiddleware) (*GinJWTMiddleware, error) {
 }
 
 func (mw *GinJWTMiddleware) readKeys() error {
-	err := mw.privateKey()
-	if err != nil {
-		return err
+	if mw.PrivKey == nil {
+		err := mw.privateKey()
+		if err != nil {
+			return err
+		}
 	}
-	err = mw.publicKey()
-	if err != nil {
-		return err
+	if mw.PubKey == nil {
+		err := mw.publicKey()
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -228,7 +232,7 @@ func (mw *GinJWTMiddleware) privateKey() error {
 	if err != nil {
 		return ErrInvalidPrivKey
 	}
-	mw.privKey = key
+	mw.PrivKey = key
 	return nil
 }
 
@@ -241,7 +245,7 @@ func (mw *GinJWTMiddleware) publicKey() error {
 	if err != nil {
 		return ErrInvalidPubKey
 	}
-	mw.pubKey = key
+	mw.PubKey = key
 	return nil
 }
 
@@ -510,7 +514,7 @@ func (mw *GinJWTMiddleware) signedString(token *jwt.Token) (string, error) {
 	var tokenString string
 	var err error
 	if mw.usingPublicKeyAlgo() {
-		tokenString, err = token.SignedString(mw.privKey)
+		tokenString, err = token.SignedString(mw.PrivKey)
 	} else {
 		tokenString, err = token.SignedString(mw.Key)
 	}
@@ -705,7 +709,7 @@ func (mw *GinJWTMiddleware) ParseToken(c *gin.Context) (*jwt.Token, error) {
 			return nil, ErrInvalidSigningAlgorithm
 		}
 		if mw.usingPublicKeyAlgo() {
-			return mw.pubKey, nil
+			return mw.PubKey, nil
 		}
 
 		// save token string if vaild
@@ -722,7 +726,7 @@ func (mw *GinJWTMiddleware) ParseTokenString(token string) (*jwt.Token, error) {
 			return nil, ErrInvalidSigningAlgorithm
 		}
 		if mw.usingPublicKeyAlgo() {
-			return mw.pubKey, nil
+			return mw.PubKey, nil
 		}
 
 		return mw.Key, nil
